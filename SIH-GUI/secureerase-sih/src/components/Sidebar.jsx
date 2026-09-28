@@ -10,7 +10,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
         <div className="brand-shield">◆</div>
         <div>
           <h2>FORENSIC <span>CORE</span></h2>
-          <p>Recover · Sanitize · Verify</p>
         </div>
       </div>
 
