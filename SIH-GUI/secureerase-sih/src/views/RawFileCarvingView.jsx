@@ -8,6 +8,7 @@ export default function RawFileCarvingView() {
   const [targetType, setTargetType] = useState('logical'); // 'physical', 'logical', 'image'
   const [selectedTarget, setSelectedTarget] = useState('evidence.img'); // default
   const [isUploading, setIsUploading] = useState(false);
+  const [alertStatus, setAlertStatus] = useState(null);
 
   useEffect(() => {
     fetch("http://127.0.0.1:8000/api/drives")
@@ -50,6 +51,7 @@ export default function RawFileCarvingView() {
   };
 
   const handleStartCarving = async () => {
+    setAlertStatus(null);
     setIsCarving(true);
     setLogs(prev => [...prev, { type: 'INFO', text: 'Starting raw file carving...' }]);
     
@@ -83,12 +85,15 @@ export default function RawFileCarvingView() {
           { type: 'SUCCESS', text: `Carving complete. ${data.total_recovered} files recovered.` },
           { type: 'VALIDATE', text: 'Validation finished.' }
         ]);
+        setAlertStatus({ type: 'success', message: 'Recovery successfully done' });
       } else {
         setLogs(prev => [...prev, { type: 'ERROR', text: data.detail || 'Recovery failed.' }]);
+        setAlertStatus({ type: 'error', message: 'Recovery failed' });
       }
     } catch (error) {
       console.error(error);
       setLogs(prev => [...prev, { type: 'ERROR', text: 'Failed to connect to backend engine.' }]);
+      setAlertStatus({ type: 'error', message: 'Recovery failed' });
     } finally {
       setIsCarving(false);
     }
@@ -110,18 +115,80 @@ export default function RawFileCarvingView() {
         {/* LEFT COLUMN */}
         <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
+          {/* Target Selection Card */}
+          <div className="panel configuration">
+            <div className="panel-title">
+              <span style={{ color: '#00f0ff' }}>▰</span>
+              <h2 className="raw-carving-section-title">Target Selection</h2>
+            </div>
+
+            <div className="target-grid carving-target-grid">
+              <button
+                className={`target-card carving-target-card ${targetType === 'physical' ? 'selected' : ''}`}
+                onClick={() => { setTargetType('physical'); if (drives.physical.length) setSelectedTarget(drives.physical[0].id); else setSelectedTarget('evidence.img'); }}
+              >
+                Physical Drive
+              </button>
+              <button
+                className={`target-card carving-target-card ${targetType === 'logical' ? 'selected' : ''}`}
+                onClick={() => { setTargetType('logical'); if (drives.logical.length) setSelectedTarget(drives.logical[0].id); else setSelectedTarget('evidence.img'); }}
+              >
+                Logical Volume
+              </button>
+              <button
+                className={`target-card carving-target-card ${targetType === 'image' ? 'selected' : ''}`}
+                onClick={() => { setTargetType('image'); setSelectedTarget(''); }}
+              >
+                Disk Image
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '15px' }}>
+              <label style={{ display: 'block', fontSize: '11px', color: '#879bb5', marginBottom: '5px', textTransform: 'uppercase' }}>
+                {targetType === 'image' ? 'Upload Image (.img, .dd)' : 'Select Drive / Volume'}
+              </label>
+              {targetType === 'image' ? (
+                <div>
+                  <input type="file" id="disk-image-upload" style={{ display: 'none' }} accept=".img,.dd,.iso,.bin" onChange={handleFileUpload} />
+                  <button onClick={() => document.getElementById('disk-image-upload').click()} style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid #1a334e', borderRadius: '4px', cursor: 'pointer' }}>
+                    {isUploading ? 'Uploading...' : 'Browse for Image File...'}
+                  </button>
+                </div>
+              ) : (
+                <select
+                  value={selectedTarget}
+                  onChange={e => setSelectedTarget(e.target.value)}
+                  style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid #1a334e', borderRadius: '4px' }}
+                >
+                  <option value="evidence.img">Simulated evidence.img</option>
+                  {drives[targetType]?.map(d => (
+                    <option key={d.id} value={d.id}>{d.name} ({d.size_gb} GB)</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            <div className="drive-details">
+              <div>
+                <span>Target Path</span>
+                <strong style={{ fontFamily: 'monospace', color: '#a855f7', wordBreak: 'break-all' }}>{selectedTarget || 'No file selected'}</strong>
+              </div>
+              <div>
+                <span>Access Level</span>
+                <strong style={{ color: '#f59e0b' }}>
+                  {targetType === 'physical' ? 'Raw Block Access (Admin)' : targetType === 'logical' ? 'Filesystem Level' : 'Image File Parsing'}
+                </strong>
+              </div>
+            </div>
+          </div>
+
           {/* Control Card */}
           <div className="panel configuration">
             <div className="panel-title">
               <span style={{ color: '#00f0ff' }}>◷</span>
-              <h2>Recovery Operations</h2>
+              <h2 className="raw-carving-section-title">Recovery Operations</h2>
             </div>
             
-            <div style={{ marginBottom: '1.5rem', color: '#94a3b8', fontSize: '13px' }}>
-              Primary Method: <strong style={{ color: '#fff' }}>Raw File Carving</strong> <br />
-              Supported Types: <span style={{ fontFamily: 'monospace', color: '#a855f7' }}>PNG, JPG, PDF, DOCX, ZIP</span>
-            </div>
-
             <button 
               className="start-button" 
               onClick={handleStartCarving}
@@ -149,124 +216,34 @@ export default function RawFileCarvingView() {
                 <div style={{ fontSize: '11px', color: '#879bb5', textTransform: 'uppercase' }}>Invalid</div>
               </div>
             </div>
-          </div>
 
-          {/* Recovered Files Table */}
-          <div className="panel recent">
-            <div className="recent-header">
-              <div className="panel-title">
-                <span style={{ color: '#a855f7' }}>▣</span>
-                <h2>Recovered Files</h2>
+            {alertStatus && (
+              <div
+                role="alert"
+                style={{
+                  marginTop: '16px',
+                  padding: '12px 14px',
+                  borderRadius: '6px',
+                  background: alertStatus.type === 'success'
+                    ? 'rgba(0, 216, 161, 0.12)'
+                    : 'rgba(255, 98, 107, 0.12)',
+                  border: `1px solid ${alertStatus.type === 'success' ? '#00d8a1' : '#ff626b'}`,
+                  color: alertStatus.type === 'success' ? '#00d8a1' : '#ff626b',
+                  fontSize: '13px',
+                }}
+              >
+                {alertStatus.message}
               </div>
-            </div>
-            <table style={{ width: '100%', marginTop: '10px' }}>
-              <thead>
-                <tr>
-                  <th>Filename</th>
-                  <th>Type</th>
-                  <th>Size</th>
-                  <th>Status</th>
-                  <th>Hash</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recovered > 0 ? (
-                  stats.files && stats.files.map((file, idx) => (
-                    <tr key={idx}>
-                      <td style={{ fontFamily: 'monospace' }}>{file.filename}</td>
-                      <td>{file.filename.split('.').pop().toUpperCase()}</td>
-                      <td>{file.size_mb} MB</td>
-                      <td>
-                        <span style={{ color: file.status === 'VALID' ? '#10b981' : file.status === 'PARTIAL' ? '#f59e0b' : '#f43f5e' }}>
-                          {file.status}
-                        </span>
-                      </td>
-                      <td style={{ fontFamily: 'monospace', color: '#a855f7' }}>-</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#879bb5' }}>
-                      Ready for raw carving. Click "Start Raw Carving" to begin.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+            )}
           </div>
 
         </section>
 
         {/* RIGHT COLUMN */}
         <aside className="right-column">
-          
-          {/* Target Selection Card */}
-          <div className="panel side-panel">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h2 style={{ margin: 0 }}><span style={{ color: '#00f0ff' }}>▰</span> &nbsp; Target Selection</h2>
-              <span style={{ background: 'rgba(0, 240, 255, 0.1)', color: '#00f0ff', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', border: '1px solid rgba(0,240,255,0.3)', fontWeight: 'bold' }}>READY</span>
-            </div>
-            
-            <div style={{ display: 'flex', gap: '5px', marginBottom: '15px' }}>
-              <button 
-                onClick={() => { setTargetType('physical'); if(drives.physical.length) setSelectedTarget(drives.physical[0].id); else setSelectedTarget('evidence.img'); }}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', background: targetType === 'physical' ? 'rgba(0, 240, 255, 0.2)' : 'transparent', border: `1px solid ${targetType === 'physical' ? '#00f0ff' : '#1a334e'}`, color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>
-                Physical Drive
-              </button>
-              <button 
-                onClick={() => { setTargetType('logical'); if(drives.logical.length) setSelectedTarget(drives.logical[0].id); else setSelectedTarget('evidence.img'); }}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', background: targetType === 'logical' ? 'rgba(168, 85, 247, 0.2)' : 'transparent', border: `1px solid ${targetType === 'logical' ? '#a855f7' : '#1a334e'}`, color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>
-                Logical Volume
-              </button>
-              <button 
-                onClick={() => { setTargetType('image'); setSelectedTarget(''); }}
-                style={{ flex: 1, padding: '8px', fontSize: '11px', background: targetType === 'image' ? 'rgba(16, 185, 129, 0.2)' : 'transparent', border: `1px solid ${targetType === 'image' ? '#10b981' : '#1a334e'}`, color: '#fff', borderRadius: '4px', cursor: 'pointer' }}>
-                Disk Image
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '15px' }}>
-              <label style={{ display: 'block', fontSize: '11px', color: '#879bb5', marginBottom: '5px', textTransform: 'uppercase' }}>
-                {targetType === 'image' ? 'Upload Image (.img, .dd)' : 'Select Drive / Volume'}
-              </label>
-              
-              {targetType === 'image' ? (
-                <div>
-                  <input type="file" id="disk-image-upload" style={{ display: 'none' }} accept=".img,.dd,.iso,.bin" onChange={handleFileUpload} />
-                  <button onClick={() => document.getElementById('disk-image-upload').click()} style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid #1a334e', borderRadius: '4px', cursor: 'pointer' }}>
-                    {isUploading ? 'Uploading...' : 'Browse for Image File...'}
-                  </button>
-                </div>
-              ) : (
-                <select 
-                  value={selectedTarget}
-                  onChange={e => setSelectedTarget(e.target.value)}
-                  style={{ width: '100%', padding: '10px', background: 'rgba(0,0,0,0.3)', color: '#fff', border: '1px solid #1a334e', borderRadius: '4px' }}>
-                  <option value="evidence.img">Simulated evidence.img</option>
-                  {drives[targetType]?.map(d => (
-                    <option key={d.id} value={d.id}>{d.name} ({d.size_gb} GB)</option>
-                  ))}
-                </select>
-              )}
-            </div>
-            
-            <div className="drive-details">
-              <div>
-                <span>Target Path</span>
-                <strong style={{ fontFamily: 'monospace', color: '#a855f7', wordBreak: 'break-all' }}>{selectedTarget || 'No file selected'}</strong>
-              </div>
-              <div>
-                <span>Access Level</span>
-                <strong style={{ color: '#f59e0b' }}>
-                  {targetType === 'physical' ? 'Raw Block Access (Admin)' : targetType === 'logical' ? 'Filesystem Level' : 'Image File Parsing'}
-                </strong>
-              </div>
-            </div>
-          </div>
-
           {/* Operation Logs */}
           <div className="panel side-panel">
-            <h2><span style={{ color: '#f59e0b' }}>▤</span> &nbsp; Operation Logs</h2>
+            <h2 className="raw-carving-section-title"><span style={{ color: '#f59e0b' }}>▤</span> &nbsp; Operation Logs</h2>
             <div style={{ 
               background: 'rgba(0,0,0,0.5)', 
               border: '1px solid #1a334e', 
@@ -301,6 +278,50 @@ export default function RawFileCarvingView() {
 
         </aside>
 
+      </div>
+
+      {/* Recovered Files Table */}
+      <div className="panel recent">
+        <div className="recent-header">
+          <div className="panel-title">
+            <span style={{ color: '#a855f7' }}>▣</span>
+            <h2 className="raw-carving-section-title">Recovered Files</h2>
+          </div>
+        </div>
+        <table style={{ width: '100%', marginTop: '10px' }}>
+          <thead>
+            <tr>
+              <th>Filename</th>
+              <th>Type</th>
+              <th>Size</th>
+              <th>Status</th>
+              <th>Hash</th>
+            </tr>
+          </thead>
+          <tbody>
+            {stats.recovered > 0 ? (
+              stats.files && stats.files.map((file, idx) => (
+                <tr key={idx}>
+                  <td style={{ fontFamily: 'monospace' }}>{file.filename}</td>
+                  <td>{file.filename.split('.').pop().toUpperCase()}</td>
+                  <td>{file.size_mb} MB</td>
+                  <td>
+                    <span style={{ color: file.status === 'VALID' ? '#10b981' : file.status === 'PARTIAL' ? '#f59e0b' : '#f43f5e' }}>
+                      {file.status}
+                    </span>
+                  </td>
+                  <td style={{ fontFamily: 'monospace', color: '#a855f7' }}>-</td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" style={{ textAlign: 'center', padding: '30px', color: '#879bb5' }}>
+                  Ready for raw carving. Click "Start Raw Carving" to begin.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
     </div>
   );

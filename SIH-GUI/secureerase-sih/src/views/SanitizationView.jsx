@@ -21,10 +21,13 @@ export default function SanitizationView() {
       try {
         const response = await fetch("http://127.0.0.1:8000/api/drives");
         const data = await response.json();
-        const allDrives = [...(data.physical || []), ...(data.logical || [])];
-        setDrives(allDrives);
-        if (allDrives.length > 0) {
-          setSelectedDrive(allDrives[0]);
+        const safeLogical = (data.logical || []).filter(d => {
+           const id = d.id.toUpperCase();
+           return !id.includes("C:") && !id.includes("D:");
+        });
+        setDrives(safeLogical);
+        if (safeLogical.length > 0) {
+          setSelectedDrive(safeLogical[0]);
         }
       } catch (err) {
         console.error("Failed to fetch drives", err);
@@ -64,7 +67,19 @@ export default function SanitizationView() {
     }
   }
 
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  function handleStartClick() {
+    const payloadTarget = target === "drive" ? selectedDrive?.id : uploadedTarget;
+    if (!payloadTarget) {
+      alert("Please select a target first.");
+      return;
+    }
+    setShowConfirm(true);
+  }
+
   async function startSanitization() {
+    setShowConfirm(false);
     try {
       const payloadTarget = target === "drive" ? selectedDrive?.id : uploadedTarget;
       if (!payloadTarget) {
@@ -303,7 +318,7 @@ export default function SanitizationView() {
                 </div>
                 <button
                   className="start-button"
-                  onClick={startSanitization}
+                  onClick={handleStartClick}
                 >
                   ▶ &nbsp; Start Sanitization
                 </button>
@@ -485,6 +500,24 @@ export default function SanitizationView() {
           </div>
         </aside>
       </div>
+
+      {/* CONFIRMATION MODAL */}
+      {showConfirm && (
+        <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div className="modal-content" style={{background: '#1c2431', padding: '30px', borderRadius: '10px', maxWidth: '500px', border: '1px solid #ff626b'}}>
+            <h2 style={{color: '#ff626b', marginTop: 0}}>⚠️ Confirm Sanitization</h2>
+            <p>You are about to permanently securely erase the following target:</p>
+            <strong style={{display: 'block', margin: '15px 0', padding: '10px', background: '#0d131f', borderRadius: '5px'}}>
+              {target === "drive" ? selectedDrive?.id : uploadedTarget}
+            </strong>
+            <p style={{color: '#bdacb7', fontSize: '14px'}}>This action CANNOT be undone. The backend safety firewall will also perform a final validation before proceeding.</p>
+            <div style={{display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end'}}>
+              <button onClick={() => setShowConfirm(false)} style={{padding: '10px 20px', background: 'transparent', border: '1px solid #2a3441', color: 'white', borderRadius: '5px', cursor: 'pointer'}}>Cancel</button>
+              <button onClick={startSanitization} style={{padding: '10px 20px', background: '#ff626b', border: 'none', color: 'white', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}>Proceed with Erase</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
