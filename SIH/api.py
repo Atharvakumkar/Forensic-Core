@@ -14,6 +14,13 @@ from sanitizer import sanitize_file
 from verification import verify_sanitization
 from audit_logger import generate_audit_log
 
+
+progress_state = {
+    "progress": 0,
+    "status": "idle"
+}
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -46,8 +53,14 @@ def upload_file():
         "success": True,
         "target": str(file_path)
     })
-@app.route("/api/sanitize", methods=["POST"])
 
+
+@app.route("/api/progress", methods=["GET"])
+def get_progress():
+    return jsonify(progress_state)
+
+
+@app.route("/api/sanitize", methods=["POST"])
 def sanitize():
 
     data = request.get_json()
@@ -82,7 +95,19 @@ def sanitize():
     pre_hash = calculate_sha256(target)
 
     # 5. Sanitization
-    sanitize_file(target)
+    progress_state["progress"] = 0
+    progress_state["status"] = "running"
+
+    def update_progress(value):
+        progress_state["progress"] = value
+
+    sanitize_file(
+        target,
+        progress_callback=update_progress
+    )
+
+    progress_state["progress"] = 100
+    progress_state["status"] = "completed"
 
     # 6. Verification
     verified = verify_sanitization(target)
@@ -115,4 +140,8 @@ def sanitize():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=5000, debug=True)
+    app.run(
+        host="127.0.0.1",
+        port=5000,
+        debug=True
+    )

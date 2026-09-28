@@ -412,10 +412,71 @@ button {
 
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  column-gap: 18px;
+  row-gap: 8px;
+  align-items: start;
 }
 
+.main-grid > .configuration {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.main-grid > .progress-panel {
+  grid-column: 2;
+  grid-row: 1/span 2;
+}
+
+.main-grid > .quick-actions-panel {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.progress-panel {
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: stretch;
+
+  display: flex;
+  flex-direction: column;
+}
+
+
+.progress-panel .progress-circle {
+  margin: 10px auto 8px;
+  width: 190px;
+  height: 190px;
+}
+
+
+.progress-panel .progress-circle > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+
+.progress-panel .progress-circle span {
+  display: block;
+}
+
+
+.progress-panel .progress-stats {
+  margin-top: 12px;
+}
+
+
+.progress-panel .progress-bar {
+  margin-top: 18px;
+}
+
+.progress-panel .start-button {
+  margin-top: 50px;
+  margin-bottom: 0px;
+}
 .panel {
   background: linear-gradient(145deg, #0a1d31, #08192b);
   border: 1px solid #1a334e;
@@ -451,12 +512,12 @@ button {
 
 .config-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 1fr;
   gap: 24px;
 }
 
 .config-left {
-  border-right: 1px solid #1b324a;
+  border-right:none;
   padding-right: 24px;
   min-width: 0;
 }
@@ -937,11 +998,6 @@ td {
 .sanitization-result span {
   font-size: 12px;
   opacity: 0.7;
-<<<<<<< HEAD:SIH-GUI/secureerase-sih/src/App.css
-=======
-  overflow-wrap: anywhere;
-  word-break: break-word;
->>>>>>> 1b8b5a3 (Improve sanitization GUI layout):src/App.css
 }
 /* SIDEBAR COLLAPSE STYLES */
 .nav-group {
@@ -1001,4 +1057,21 @@ td {
   padding-left: 10px;
   font-weight: bold;
 }
+/* Progress Bar Animation */
+.progress-panel .progress-bar {
+  overflow: hidden;
+}
 
+.progress-panel .progress-fill {
+  height: 100%;
+  width: 0%;
+  transition: width 0.8s ease;
+}
+
+.progress-panel .progress-fill.started {
+  width: 70%;
+}
+
+.progress-panel .progress-fill.completed {
+  width: 100%;
+}
