@@ -19,6 +19,12 @@ export default function RawFileCarvingView() {
       .catch(err => console.error("Failed to load drives:", err));
   }, []);
 
+  useEffect(() => {
+    if (!alertStatus) return;
+    const timeoutId = window.setTimeout(() => setAlertStatus(null), 4500);
+    return () => window.clearTimeout(timeoutId);
+  }, [alertStatus]);
+
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -217,24 +223,6 @@ export default function RawFileCarvingView() {
               </div>
             </div>
 
-            {alertStatus && (
-              <div
-                role="alert"
-                style={{
-                  marginTop: '16px',
-                  padding: '12px 14px',
-                  borderRadius: '6px',
-                  background: alertStatus.type === 'success'
-                    ? 'rgba(0, 216, 161, 0.12)'
-                    : 'rgba(255, 98, 107, 0.12)',
-                  border: `1px solid ${alertStatus.type === 'success' ? '#00d8a1' : '#ff626b'}`,
-                  color: alertStatus.type === 'success' ? '#00d8a1' : '#ff626b',
-                  fontSize: '13px',
-                }}
-              >
-                {alertStatus.message}
-              </div>
-            )}
           </div>
 
         </section>
@@ -323,6 +311,41 @@ export default function RawFileCarvingView() {
           </tbody>
         </table>
       </div>
+
+      {alertStatus && (
+        <div
+          role="alert"
+          style={{
+            position: 'fixed',
+            right: '24px',
+            bottom: '24px',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            width: 'min(360px, calc(100vw - 32px))',
+            padding: '14px 16px',
+            background: '#08192b',
+            border: `1px solid ${alertStatus.type === 'success' ? '#00d8a1' : '#ff626b'}`,
+            borderLeft: `4px solid ${alertStatus.type === 'success' ? '#00d8a1' : '#ff626b'}`,
+            borderRadius: '6px',
+            color: alertStatus.type === 'success' ? '#00d8a1' : '#ff626b',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            fontSize: '13px',
+          }}
+        >
+          <span>{alertStatus.message}</span>
+          <button
+            type="button"
+            aria-label="Dismiss notification"
+            onClick={() => setAlertStatus(null)}
+            style={{ background: 'transparent', border: 0, color: 'inherit', fontSize: '20px' }}
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }
