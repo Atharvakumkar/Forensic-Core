@@ -10,6 +10,7 @@ import os
 # Import our unified engine and validator
 from .recovery.engine import RecoveryEngine
 from .recovery.validator import FileValidator
+from .sanitization.safety import safety_check
 
 app = FastAPI(title="SIH 2026 Data Recovery API")
 
@@ -125,7 +126,10 @@ def sanitize_endpoint(request: SanitizeRequestFrontend):
     if not target:
         raise HTTPException(status_code=400, detail="No target provided")
     
-    if not os.path.exists(target):
+    if not safety_check(target):
+        raise HTTPException(status_code=403, detail=f"Safety Firewall: Target '{target}' is rejected. Only approved demo targets are allowed.")
+    
+    if not target.startswith("\\\\.\\") and not os.path.exists(target):
         return {"success": False, "message": f"Target not found: {target}"}
     
     try:
