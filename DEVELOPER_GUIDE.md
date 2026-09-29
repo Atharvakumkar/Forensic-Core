@@ -34,7 +34,7 @@ Enter the following commands to successfully create the Test Disc:
 ```bash
 Set-ExecutionPolicy -Scope Process Bypass
 
-create-test-disk.ps1
+.\create-test-disk.ps1
 ```
 
 After creating the Test Disc, add few files in it.
