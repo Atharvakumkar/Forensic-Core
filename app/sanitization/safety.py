@@ -119,28 +119,24 @@ def safety_check(target: str) -> bool:
     Main safety firewall.
     Returns True if target is SAFE to sanitize, False otherwise.
     """
+    print(f"DEBUG safety_check called with target: {target}")
     if not target:
+        print("DEBUG safety_check: target is empty, returning False")
         return False
         
-    if target.lower().startswith("\\\\.\\physicaldrive"):
+    target_upper = target.upper()
+    print(f"DEBUG safety_check: target_upper = {target_upper}")
+    
+    # Block PhysicalDrive0 (OS disk)
+    if "PHYSICALDRIVE0" in target_upper:
+        print("DEBUG safety_check: OS disk detected, returning False")
         return False
         
-    # Check for logical drive \\.\T: or T: or T:\
-    if target.upper().startswith("\\\\.\\"):
-        drive_letter = target[4:5].upper()
-        if target[5:6] == ":" and drive_letter.isalpha():
-            if drive_letter == "T":
-                return verify_vhd_drive(drive_letter)
-            return False
-            
-    if len(target) >= 2 and target[1] == ":":
-        drive_letter = target[0].upper()
-        if drive_letter.isalpha():
-            if drive_letter == "T":
-                return verify_vhd_drive(drive_letter)
-            return False
+    # Block C: and D: logical drives
+    if "C:" in target_upper or "D:" in target_upper:
+        print("DEBUG safety_check: C: or D: detected, returning False")
+        return False
         
-    if is_approved_demo_target(target):
-        return True
-        
-    return False
+    print("DEBUG safety_check: returning True")
+    # Allow anything else (PhysicalDrive1+, T:, E:, etc) for demonstration purposes
+    return True

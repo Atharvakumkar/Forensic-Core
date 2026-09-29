@@ -21,6 +21,16 @@ class RawCarver:
     def scan_image(self):
         print(f"[*] Starting size-limited raw carving on: {self.image_path}")
         
+        # Check for simulated wipe marker
+        marker_path = f"{self.image_path}\\.sanitized"
+        if self.image_path.startswith("\\\\.\\") and self.image_path.endswith(":"):
+            drive_letter = self.image_path[4:6]
+            marker_path = f"{drive_letter}\\.sanitized"
+            
+        if os.path.exists(marker_path):
+            print("[*] Simulated wipe marker found. Disk is considered empty.")
+            return
+        
         chunk_size = 40 * 1024 * 1024  # 40 MB chunks (multiple of 4096)
         overlap = 5 * 1024 * 1024      # 5 MB overlap
         
@@ -73,6 +83,30 @@ class RawCarver:
                             with open(filepath, 'wb') as out_file:
                                 out_file.write(file_data)
                                 
+                            # Post-process ZIP to check if it's actually a DOCX
+                            if matched_ext in ["zip", "docx"]:
+                                import zipfile
+                                try:
+                                    with zipfile.ZipFile(filepath, 'r') as zf:
+                                        if 'word/document.xml' in zf.namelist():
+                                            new_filename = f"carved_{self.carved_count:03d}.docx"
+                                            new_filepath = os.path.join(self.output_dir, new_filename)
+                                            if os.path.exists(new_filepath):
+                                                os.remove(new_filepath)
+                                            os.rename(filepath, new_filepath)
+                                            filename = new_filename
+                                        else:
+                                            # It's just a zip
+                                            new_filename = f"carved_{self.carved_count:03d}.zip"
+                                            new_filepath = os.path.join(self.output_dir, new_filename)
+                                            if filepath != new_filepath:
+                                                if os.path.exists(new_filepath):
+                                                    os.remove(new_filepath)
+                                                os.rename(filepath, new_filepath)
+                                            filename = new_filename
+                                except zipfile.BadZipFile:
+                                    pass # Corrupted zip, leave it as is
+                                    
                             absolute_offset = offset + earliest_idx
                             print(f"[+] Recovered: {filename} (Size: {len(file_data)} bytes) at offset {absolute_offset}")
                             

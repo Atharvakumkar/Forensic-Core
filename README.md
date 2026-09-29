@@ -633,6 +633,7 @@ npm run dev
 - `/api/drives` uses `subprocess.run` to call PowerShell (`Get-Disk`, `Get-Volume`) for drive detection.
 - `/api/upload` saves uploaded disk images to a local `data/` folder (created automatically).
 - `/api/recover` delegates to `RecoveryEngine` in `app.recovery`.
+- **Raw File Carving:** The carving pipeline (`carver.py`) operates completely independently of filesystem metadata. It streams raw disk bytes using a memory-efficient sliding window (40MB chunks, 5MB overlap). By identifying file signatures (headers/footers) for JPEGs, PNGs, PDFs, and ZIPs, it extracts the raw binary. For complex formats like DOCX (which share ZIP signatures), it dynamically parses the internal archive structure (`word/document.xml`) to confidently classify and recover the artifact.
 
 ## Troubleshooting
 

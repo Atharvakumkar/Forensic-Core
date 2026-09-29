@@ -30,12 +30,12 @@ export default function SanitizationView() {
     async function fetchDrives() {
       try {
         const response = await fetch(
-          "http://127.0.0.1:8000/api/drives"
+          "http://127.0.0.1:8080/api/drives"
         );
 
         const data = await response.json();
 
-        // Keep the safe logical-drive filtering from Atharva's changes
+        // Safely filter out the main OS drive (C: and D:)
         const safeLogical = (data.logical || []).filter((d) => {
           const id = String(d.id || "").toUpperCase();
 
@@ -45,10 +45,18 @@ export default function SanitizationView() {
           );
         });
 
-        setDrives(safeLogical);
+        // Safely filter out the main OS physical drive (usually PhysicalDrive0)
+        const safePhysical = (data.physical || []).filter((d) => {
+          const id = String(d.id || "").toUpperCase();
+          return !id.includes("PHYSICALDRIVE0");
+        });
 
-        if (safeLogical.length > 0) {
-          setSelectedDrive(safeLogical[0]);
+        const combinedDrives = [...safePhysical, ...safeLogical];
+
+        setDrives(combinedDrives);
+
+        if (combinedDrives.length > 0) {
+          setSelectedDrive(combinedDrives[0]);
         }
       } catch (err) {
         console.error(
@@ -68,7 +76,7 @@ export default function SanitizationView() {
     const progressInterval = setInterval(async () => {
       try {
         const response = await fetch(
-          "http://127.0.0.1:5000/api/progress"
+          "http://127.0.0.1:8080/api/progress"
         );
 
         const data = await response.json();
@@ -177,7 +185,7 @@ export default function SanitizationView() {
 
     try {
       const response = await fetch(
-        "http://127.0.0.1:8000/api/upload",
+        "http://127.0.0.1:8080/api/upload",
         {
           method: "POST",
           body: formData,
@@ -261,7 +269,7 @@ export default function SanitizationView() {
       setStarted(true);
 
       const response = await fetch(
-        "http://127.0.0.1:5000/api/sanitize",
+        "http://127.0.0.1:8080/api/sanitize",
         {
           method: "POST",
           headers: {
