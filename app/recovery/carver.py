@@ -11,7 +11,8 @@ class RawCarver:
         self.max_file_size = 40 * 1024 * 1024 
         
         self.signatures = {
-            "jpg": (b'\xFF\xD8\xFF', b'\xFF\xD9', 2),
+            "jpg_jfif": (b'\xFF\xD8\xFF\xE0', b'\xFF\xD9', 2),
+            "jpg_exif": (b'\xFF\xD8\xFF\xE1', b'\xFF\xD9', 2),
             "png": (b'\x89\x50\x4E\x47\x0D\x0A\x1A\x0A', b'IEND', 8),
             "pdf": (b'%PDF-', b'%%EOF', 5),
             "zip": (b'PK\x03\x04', b'PK\x05\x06', 22),
@@ -66,9 +67,19 @@ class RawCarver:
                             end_idx += matched_footer_len
                             file_data = chunk[earliest_idx:end_idx]
                             
+                            if len(file_data) < 1024:
+                                search_offset = end_idx
+                                continue
+                            
                             self.carved_count += 1
-                            filename = f"carved_{self.carved_count:03d}.{matched_ext}"
-                            filepath = os.path.join(self.output_dir, filename)
+                            ext_clean = matched_ext.split('_')[0]
+                            filename = f"carved_{self.carved_count:03d}.{ext_clean}"
+                            if len(file_data) < 1024 * 1024:
+                                cache_dir = os.path.join(self.output_dir, 'cache')
+                                os.makedirs(cache_dir, exist_ok=True)
+                                filepath = os.path.join(cache_dir, filename)
+                            else:
+                                filepath = os.path.join(self.output_dir, filename)
                             
                             with open(filepath, 'wb') as out_file:
                                 out_file.write(file_data)

@@ -10,6 +10,8 @@ export default function SanitizationView() {
   const [hardware, setHardware] = useState(false);
   const [started, setStarted] = useState(false);
   const [result, setResult] = useState(null);
+  const [modalData, setModalData] = useState(null);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadedTarget, setUploadedTarget] = useState(null);
 
@@ -19,12 +21,15 @@ export default function SanitizationView() {
   useEffect(() => {
     async function fetchDrives() {
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/drives");
+        const response = await fetch("http://127.0.0.1:8002/api/drives");
         const data = await response.json();
-        const allDrives = [...(data.physical || []), ...(data.logical || [])];
-        setDrives(allDrives);
-        if (allDrives.length > 0) {
-          setSelectedDrive(allDrives[0]);
+        const safeLogical = (data.logical || []).filter(d => {
+           const id = d.id.toUpperCase();
+           return !id.includes("C:") && !id.includes("D:");
+        });
+        setDrives(safeLogical);
+        if (safeLogical.length > 0) {
+          setSelectedDrive(safeLogical[0]);
         }
       } catch (err) {
         console.error("Failed to fetch drives", err);
@@ -43,7 +48,7 @@ export default function SanitizationView() {
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/upload", {
+      const response = await fetch("http://127.0.0.1:8002/api/upload", {
         method: "POST",
         body: formData,
       });
@@ -53,26 +58,36 @@ export default function SanitizationView() {
 
       if (data.success) {
         setUploadedTarget(data.target);
-        alert(`File uploaded successfully: ${data.target}`);
+        setModalData({ title: "Upload Success", message: `File uploaded successfully: ${data.target}`, success: true });
       } else {
-        alert(`Upload failed: ${data.error}`);
+        setModalData({ title: "Upload Failed", message: `Upload failed: ${data.error}`, success: false });
         console.error("Upload failed:", data.error);
       }
     } catch (error) {
       console.error("Upload Error:", error);
-      alert("Could not connect to the sanitization engine.");
+      setModalData({ title: "Connection Error", message: "Could not connect to the sanitization engine.", success: false });
     }
   }
 
+  function handleStartClick() {
+    const payloadTarget = target === "drive" ? selectedDrive?.id : uploadedTarget;
+    if (!payloadTarget) {
+      setModalData({ title: "Error", message: "Please select a target first.", success: false });
+      return;
+    }
+    setShowConfirm(true);
+  }
+
   async function startSanitization() {
+    setShowConfirm(false);
     try {
       const payloadTarget = target === "drive" ? selectedDrive?.id : uploadedTarget;
       if (!payloadTarget) {
-        alert("Please select a target first.");
+        setModalData({ title: "Error", message: "Please select a target first.", success: false });
         return;
       }
       
-      const response = await fetch("http://127.0.0.1:8000/api/sanitize", {
+      const response = await fetch("http://127.0.0.1:8002/api/sanitize", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -88,16 +103,21 @@ export default function SanitizationView() {
 
       if (data.success) {
         setStarted(true);
-        alert(`✅ SANITIZATION SUCCESSFUL!\n\n${data.message}\n\n📄 Certificate Generated:\n${data.certificate_path}\n\nYou can view your reports in the "data/reports" folder.`);
+        setModalData({ 
+          title: "SANITIZATION SUCCESSFUL!", 
+          message: `${data.message}\n\nCertificate Generated:\n${data.certificate_path}\n\nYou can view your reports in the "data/reports" folder.`,
+          success: true,
+          result: data
+        });
       } else {
         setStarted(false);
         const errorMsg = data.message || data.error || data.result;
-        alert(`Sanitization failed: ${errorMsg}`);
+        setModalData({ title: "Sanitization failed", message: errorMsg, success: false });
         console.error("Sanitization failed:", errorMsg);
       }
     } catch (error) {
       console.error("API Error:", error);
-      alert("Could not connect to the sanitization engine.");
+      setModalData({ title: "Connection Error", message: "Could not connect to the sanitization engine.", success: false });
     }
   }
 
@@ -303,7 +323,7 @@ export default function SanitizationView() {
                 </div>
                 <button
                   className="start-button"
-                  onClick={startSanitization}
+                  onClick={handleStartClick}
                 >
                   ▶ &nbsp; Start Sanitization
                 </button>
@@ -485,6 +505,75 @@ export default function SanitizationView() {
           </div>
         </aside>
       </div>
+
+      {/* CONFIRMATION MODAL */}
+      {showConfirm && (
+        <div className="modal-overlay" style={{position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000}}>
+          <div className="modal-content" style={{background: '#1c2431', padding: '30px', borderRadius: '10px', maxWidth: '500px', border: '1px solid #ff626b'}}>
+            <h2 style={{color: '#ff626b', marginTop: 0}}>?? Confirm Sanitization</h2>
+            <p>You are about to permanently securely erase the following target:</p>
+            <strong style={{display: 'block', margin: '15px 0', padding: '10px', background: '#0d131f', borderRadius: '5px'}}>
+              {target === "drive" ? selectedDrive?.id : uploadedTarget}
+            </strong>
+            <p style={{color: '#bdacb7', fontSize: '14px'}}>This action CANNOT be undone. The backend safety firewall will also perform a final validation before proceeding.</p>
+            <div style={{display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end'}}>
+              <button onClick={() => setShowConfirm(false)} style={{padding: '10px 20px', background: 'transparent', border: '1px solid #2a3441', color: 'white', borderRadius: '5px', cursor: 'pointer'}}>Cancel</button>
+              <button onClick={startSanitization} style={{padding: '10px 20px', background: '#ff626b', border: 'none', color: 'white', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold'}}>Proceed with Erase</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalData && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.6)", zIndex: 9999,
+          display: "flex", justifyContent: "center", alignItems: "center"
+        }}>
+          <div style={{
+            background: "#161b22", border: "1px solid #30363d", borderRadius: "8px",
+            padding: "24px", width: "550px", maxWidth: "90%",
+            color: "#e6edf3", boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+          }}>
+            <h2 style={{marginTop: 0, color: modalData.success ? "#3fb950" : "#f85149", display: "flex", alignItems: "center", gap: "10px"}}>
+              {modalData.success ? "o." : "o-"} {modalData.title}
+            </h2>
+            <div style={{whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: "14px", background: "#0d1117", padding: "15px", borderRadius: "6px", border: "1px solid #30363d"}}>
+              {modalData.message}
+            </div>
+            <div style={{display: "flex", gap: "10px", marginTop: "20px", justifyContent: "flex-end"}}>
+              {modalData.result && (
+                <button 
+                  onClick={() => {
+                    const blob = new Blob([JSON.stringify(modalData.result, null, 2)], { type: "application/json" });
+                    window.open(URL.createObjectURL(blob), "_blank");
+                  }}
+                  style={{
+                    background: "#21262d", border: "1px solid #30363d", color: "#c9d1d9",
+                    padding: "8px 16px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                  }}
+                  onMouseOver={(e) => e.target.style.background = '#30363d'}
+                  onMouseOut={(e) => e.target.style.background = '#21262d'}
+                >
+                  View JSON Report 
+                </button>
+              )}
+              <button 
+                onClick={() => setModalData(null)}
+                style={{
+                  background: modalData.success ? "#238636" : "#da3633", 
+                  border: "1px solid",
+                  borderColor: modalData.success ? "#2ea043" : "#f85149",
+                  color: "#ffffff",
+                  padding: "8px 24px", borderRadius: "6px", cursor: "pointer", fontWeight: "bold"
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

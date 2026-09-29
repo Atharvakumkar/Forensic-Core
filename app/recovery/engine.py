@@ -23,8 +23,13 @@ class RecoveryEngine:
         print(f"========================================")
         
         # Clear previous recoveries for a clean run
+        import shutil
         for f in os.listdir(self.output_dir):
-            os.remove(os.path.join(self.output_dir, f))
+            path = os.path.join(self.output_dir, f)
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path, ignore_errors=True)
 
         # 1. Run the selected recovery method
         if method == "filesystem":

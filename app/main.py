@@ -12,6 +12,10 @@ from .recovery.engine import RecoveryEngine
 from .recovery.validator import FileValidator
 
 app = FastAPI(title="SIH 2026 Data Recovery API")
+from fastapi.staticfiles import StaticFiles
+import os
+if not os.path.exists('recovered'): os.makedirs('recovered')
+app.mount('/recovered', StaticFiles(directory='recovered'), name='recovered')
 
 app.add_middleware(
     CORSMiddleware,
@@ -125,7 +129,7 @@ def sanitize_endpoint(request: SanitizeRequestFrontend):
     if not target:
         raise HTTPException(status_code=400, detail="No target provided")
     
-    if not os.path.exists(target):
+    if not target.startswith("\\\\.\\") and not os.path.exists(target):
         return {"success": False, "message": f"Target not found: {target}"}
     
     try:
@@ -151,7 +155,7 @@ def sanitize_endpoint(request: SanitizeRequestFrontend):
                 return []
                 
             if os.path.exists(output_dir):
-                shutil.rmtree(output_dir)
+                shutil.rmtree(output_dir, ignore_errors=True)
             os.makedirs(output_dir, exist_ok=True)
             
             try:
