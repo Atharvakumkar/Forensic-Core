@@ -1,25 +1,10 @@
 {
     "target": "\\\\.\\T:",
-    "artifact_count": 4,
+    "artifact_count": 1,
     "artifacts": [
         {
-            "filename": "carved_001.jpg",
-            "sha256": "32461d5bd1773012acef0ba15636752949bd7c2ce50f9172159d9f56cf0dd9af",
-            "status": "VALID"
-        },
-        {
-            "filename": "carved_002.jpg",
-            "sha256": "90052a544fb58614990fe21e5a4e1a8cb4b17b4c2054515a27338d00d26b7567",
-            "status": "VALID"
-        },
-        {
-            "filename": "carved_003.jpg",
-            "sha256": "3f37bd7bbbf62ebcf8faf721b8ca8d231bdb2cf74b4a4e935fc373393735355a",
-            "status": "VALID"
-        },
-        {
-            "filename": "carved_004.jpg",
-            "sha256": "5dd8feecfe663524b20082fe52a5d276036a996fb94510c4f507664d0cbf1078",
+            "filename": "carved_001.pdf",
+            "sha256": "9cde1914ec8c6cf6ecb23f1cac5b6c08e3aeee8b9d8629efcd50ff0a9c433fc2",
             "status": "VALID"
         }
     ]

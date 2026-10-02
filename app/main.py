@@ -133,7 +133,7 @@ def sanitize_endpoint(request: SanitizeRequestFrontend):
         return {"success": False, "message": f"Target not found: {target}"}
     
     try:
-        from .sanitization.folder_sanitization import sanitize_file, sanitize_folder
+        from sanitization.folder_sanitization import sanitize_file, sanitize_folder
         from .recovery.engine import RecoveryEngine
         from .recovery.validator import FileValidator
         from .algorithms.baseline import BaselineManager
@@ -186,7 +186,7 @@ def sanitize_endpoint(request: SanitizeRequestFrontend):
 
         # Step 2: Sanitize
         if target.startswith("\\\\.\\"):
-            from .sanitization.image_sanitization import sanitize_disk
+            from sanitization.image_sanitization import sanitize_disk
             res = sanitize_disk(target)
             success = res["success"]
             if not success:
