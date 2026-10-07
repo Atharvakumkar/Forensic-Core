@@ -1,12 +1,6 @@
 # Forensic Core
 ### Integrated Secure Data Erasure & Advanced File Recovery Tool for Digital Forensics and Data Sanitization
 
-**Smart India Hackathon 2026**
-**Problem Statement ID:** 26149
-**Theme:** Blockchain & Cybersecurity
-**PS Category:** Software
-**Team Name:** Gigabyte
-
 ---
 
 ## 1. Problem We Are Solving
